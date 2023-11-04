@@ -1,3 +1,12 @@
+def as_list(node, stream: list):
+    if not node:
+        return
+
+    stream.append(str(node.data))
+    as_list(node.left, stream)
+    as_list(node.right, stream)
+
+
 class Tree:
     def __init__(self, data):
         self.left = None
@@ -53,3 +62,5 @@ class Tree:
                 return self.data
             else:
                 return ''
+
+

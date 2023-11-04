@@ -2,7 +2,7 @@ import HuffmanTree
 from collections import OrderedDict
 
 
-def generate_tree(sorted_symbols: OrderedDict):
+def generate_tree(sorted_symbols: dict):
     tree = None
     index = 0
     for key, value in sorted_symbols.items():
@@ -20,7 +20,7 @@ def generate_bytes(tree: HuffmanTree.Tree, char: str) -> str:
     return return_value
 
 
-def codify(symbols: str) -> (HuffmanTree.Tree, str):
+def codify(symbols: str) -> (HuffmanTree.Tree, OrderedDict, str):
     symbols_counter = dict()
     for symbol in symbols:
         if symbol not in symbols_counter:
@@ -35,7 +35,7 @@ def codify(symbols: str) -> (HuffmanTree.Tree, str):
         byte_stream += generate_bytes(tree, char)
 
     print(byte_stream)
-    return tree, byte_stream
+    return tree, sorted_symbols, byte_stream
 
 
 def decodify(tree: HuffmanTree.Tree, byte_stream: str) -> str:

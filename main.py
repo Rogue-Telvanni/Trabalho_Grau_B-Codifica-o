@@ -1,6 +1,11 @@
 import Huffman
 import BSC
 import socket
+import collections
+
+# constantes
+BUFFER_SIZE = 2024
+BSC_PARITY_SIZE = 3
 
 
 def main():
@@ -35,10 +40,25 @@ def show_start() -> int:
 def run_as_client(host: str, port: int):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
-        s.sendall(b"Hello, world")
-        data = s.recv(1024)
+        while True:
+            dados = input("digite a mensagem para enviar")
+            if dados == "exit":
+                break
 
-    print(f"Received {data!r}")
+            tree, sorted_symbols, code_word = Huffman.codify(dados)
+            send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
+            # gera a string com o dicionário para gerar a arvore
+            tree_string = ""
+            for key, value in sorted_symbols.items():
+                tree_string += key + ":" + str(value) + "-"
+
+            # remove o ultimo valor
+            tree_string = tree_string[0: len(tree_string) - 1]
+
+            send_data = tree_string + "|" + send_data
+            s.sendall(send_data)
+            data = s.recv(BUFFER_SIZE)
+            print(f"Received {data!r}")
 
 
 def run_as_server():
@@ -52,11 +72,33 @@ def run_as_server():
         with connection:
             print(f"Conectado com; {addr}")
             while True:
-                data = connection.recv(1024)
+                data = connection.recv(BUFFER_SIZE)
                 if not data:
                     break
 
-                connection.sendall("Recebi")
+                split_str = data.split("|")
+                tree_string = split_str[0]
+                code_word = split_str[1]
+                print("Valor Recebido: " + code_word)
+                code_word = valida_bits(code_word)
+                print("valor a ser decodificado: " + code_word)
+                dicio = dict()
+                for value in tree_string.split("-"):
+                    dicio[value.split(":")[0]] = int(value.split(":")[1])
+
+                tree = Huffman.generate_tree(dicio)
+                resultado = Huffman.decodify(tree, code_word)
+                print(resultado)
+                connection.sendall("Recebi: " + resultado)
+
+
+def valida_bits(bits: str) -> str:
+    code_word = ""
+    for index in range(int(len(bits) / BSC_PARITY_SIZE)):
+        bit = bits[index * BSC_PARITY_SIZE: index * BSC_PARITY_SIZE + BSC_PARITY_SIZE]
+        code_word += collections.Counter(bit).most_common(1)[0][0]
+
+    return code_word
 
 
 if __name__ == '__main__':
