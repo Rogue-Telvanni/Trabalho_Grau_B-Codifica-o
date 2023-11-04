@@ -16,14 +16,14 @@ def main():
     host, port = show_conn_params()
     match choice:
         case 1:
-            run_as_client()
+            run_as_client(host, port)
         case 2:
-            run_as_server()
+            run_as_server(port)
 
 
 def show_conn_params() -> (str, int):
-    host = input("Digite o ip do servidor")
-    port = int(input("digite a porta de conexão"))
+    host = input("Digite o ip do servidor ou deixe em branco se selecionou servidor\n")
+    port = int(input("digite a porta de conexão\n"))
     return host, port
 
 
@@ -32,7 +32,7 @@ def show_start() -> int:
     print("cliente - 1")
     print("servidor - 2")
     selection = input()
-    if selection != "1" or selection != "2":
+    if selection != "1" and selection != "2":
         return 0
     return int(selection)
 
@@ -41,11 +41,12 @@ def run_as_client(host: str, port: int):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         while True:
-            dados = input("digite a mensagem para enviar")
+            dados = input("digite a mensagem para enviar\n")
             if dados == "exit":
                 break
 
             tree, sorted_symbols, code_word = Huffman.codify(dados)
+            print("enviando code word" + code_word, end="\n")
             send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
             # gera a string com o dicionário para gerar a arvore
             tree_string = ""
@@ -56,18 +57,19 @@ def run_as_client(host: str, port: int):
             tree_string = tree_string[0: len(tree_string) - 1]
 
             send_data = tree_string + "|" + send_data
-            s.sendall(send_data)
+            print("enviando dados " + send_data, end="\n")
+            s.sendall(send_data.encode())
             data = s.recv(BUFFER_SIZE)
-            print(f"Received {data!r}")
+            print(f"Received {data!r}", end="\n")
 
 
-def run_as_server():
+def run_as_server(port: int):
     # server side
-    port = 100
     ip_conn = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
         tcp_socket.bind((ip_conn, port))
         tcp_socket.listen()
+        print("Esperando conexão")
         connection, addr = tcp_socket.accept()
         with connection:
             print(f"Conectado com; {addr}")
@@ -76,20 +78,22 @@ def run_as_server():
                 if not data:
                     break
 
-                split_str = data.split("|")
+                dados = data.decode()
+                print("Recebi" + dados)
+                split_str = dados.split("|")
                 tree_string = split_str[0]
                 code_word = split_str[1]
-                print("Valor Recebido: " + code_word)
+                print("Valor Recebido: " + code_word, end="\n")
                 code_word = valida_bits(code_word)
-                print("valor a ser decodificado: " + code_word)
+                print("valor a ser decodificado: " + code_word, end="\n")
                 dicio = dict()
                 for value in tree_string.split("-"):
                     dicio[value.split(":")[0]] = int(value.split(":")[1])
 
                 tree = Huffman.generate_tree(dicio)
                 resultado = Huffman.decodify(tree, code_word)
-                print(resultado)
-                connection.sendall("Recebi: " + resultado)
+                print("valor decodificado: " + resultado, end="\n")
+                connection.sendall(("Recebi: " + resultado).encode())
 
 
 def valida_bits(bits: str) -> str:
