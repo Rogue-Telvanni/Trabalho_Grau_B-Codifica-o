@@ -24,3 +24,6 @@ hamming_7_4_dict = {
 def haaming_7_4(stream: str) -> str:
     value = hamming_7_4_dict[stream]
     return stream + value
+
+#def Validate(strea:str):
+

@@ -22,7 +22,7 @@ def codify(byte_stream: str) -> str:
     return value
 
 
-def validate(stream: str) -> bool:
+def validate(stream: str) -> (bool, str):
     index = 0
     result = stream[index: len(divisor)]
 
@@ -38,7 +38,7 @@ def validate(stream: str) -> bool:
         result += stream[len(divisor) + index: len(divisor) + index + 1]
         index += 1
 
-    return result == ("0" * (len(divisor) - 1))
+    return result == ("0" * (len(divisor) - 1)), stream[0: len(stream) - len(divisor) + 1]
 
 
 def bytes_to_xor(byte: str, divisor: str) -> str:
