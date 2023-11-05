@@ -1,18 +1,19 @@
+from enum import Enum
+
 import Huffman
 import BSC
 import socket
 import CRC
-import collections
 
 # constantes
 BUFFER_SIZE = 2024
 BSC_PARITY_SIZE = 3
+Mode = Enum('Mode', ['CRC', 'BSC', 'Hamming'])
 
 
 def main():
     stream = CRC.codify("100110")
     worked = CRC.validate(stream)
-    print(worked)
 
     choice = show_start()
     while choice == 0:
@@ -43,6 +44,7 @@ def show_start() -> int:
 
 
 def run_as_client(host: str, port: int):
+    mode = Mode('BSC')
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         while True:
@@ -50,9 +52,18 @@ def run_as_client(host: str, port: int):
             if dados == "exit":
                 break
 
+            if dados in Mode:
+                mode = Mode(dados)
+
             tree, sorted_symbols, code_word = Huffman.codify(dados)
             print("enviando code word" + code_word, end="\n")
-            send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
+            send_data = ""
+            match mode.value:
+                case 'BSC':
+                    send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
+                case 'CRC':
+                    send_data = CRC.codify(code_word)
+
             # gera a string com o dicionário para gerar a arvore
             tree_string = ""
             for key, value in sorted_symbols.items():
@@ -70,6 +81,7 @@ def run_as_client(host: str, port: int):
 
 def run_as_server(port: int):
     # server side
+    mode = Mode('BSC')
     ip_conn = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
         tcp_socket.bind((ip_conn, port))
@@ -84,12 +96,17 @@ def run_as_server(port: int):
                     break
 
                 dados = data.decode()
+                if dados in Mode:
+                    mode = Mode(dados)
+                    connection.sendall(("mudando para receber: " + mode.name).encode())
+                    continue
+
                 print("Recebi" + dados)
                 split_str = dados.split("|")
                 tree_string = split_str[0]
                 code_word = split_str[1]
                 print("Valor Recebido: " + code_word, end="\n")
-                code_word = valida_bits(code_word)
+                code_word = BSC.valida_bits(code_word, BSC_PARITY_SIZE)
                 print("valor a ser decodificado: " + code_word, end="\n")
                 dicio = dict()
                 for value in tree_string.split("-"):
@@ -99,15 +116,6 @@ def run_as_server(port: int):
                 resultado = Huffman.decodify(tree, code_word)
                 print("valor decodificado: " + resultado, end="\n")
                 connection.sendall(("Recebi: " + resultado).encode())
-
-
-def valida_bits(bits: str) -> str:
-    code_word = ""
-    for index in range(int(len(bits) / BSC_PARITY_SIZE)):
-        bit = bits[index * BSC_PARITY_SIZE: index * BSC_PARITY_SIZE + BSC_PARITY_SIZE]
-        code_word += collections.Counter(bit).most_common(1)[0][0]
-
-    return code_word
 
 
 if __name__ == '__main__':
