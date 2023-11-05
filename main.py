@@ -1,6 +1,7 @@
 import Huffman
 import BSC
 import socket
+import CRC
 import collections
 
 # constantes
@@ -9,6 +10,10 @@ BSC_PARITY_SIZE = 3
 
 
 def main():
+    stream = CRC.codify("100110")
+    worked = CRC.validate(stream)
+    print(worked)
+
     choice = show_start()
     while choice == 0:
         show_start()
