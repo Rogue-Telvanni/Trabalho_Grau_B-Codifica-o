@@ -13,6 +13,10 @@ Mode = Enum('Mode', ['CRC', 'BSC', 'Hamming'])
 
 
 def main():
+    value = Hamming.haaming_7_4("1100")
+    value = "1000011"
+    code = Hamming.Validate(value, 3)
+
     choice = show_start()
     while choice == 0:
         show_start()
