@@ -1,4 +1,5 @@
 from enum import Enum
+from random import randint
 
 import Hamming
 import Huffman
@@ -13,10 +14,9 @@ Mode = Enum('Mode', ['CRC', 'BSC', 'Hamming'])
 
 
 def main():
-    value = Hamming.haaming_7_4("1100")
-    value = "1000011"
-    code = Hamming.Validate(value, 3)
-
+    value = "0110"
+    data, parity_size = Hamming.encode(value)
+    retorno = Hamming.decode(data, parity_size)
     choice = show_start()
     while choice == 0:
         show_start()
@@ -47,6 +47,8 @@ def show_start() -> int:
 
 def run_as_client(host: str, port: int):
     mode = Mode('BSC')
+    flip = {"1": "0", "0": "1"}
+    simulate_error = False
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         while True:
@@ -57,14 +59,28 @@ def run_as_client(host: str, port: int):
             if dados in Mode:
                 mode = Mode(dados)
 
+            if dados == "erro":
+                simulate_error != simulate_error
+                continue
+
             tree, sorted_symbols, code_word = Huffman.codify(dados)
             print("enviando code word" + code_word, end="\n")
             send_data = ""
             match mode.value:
                 case 'BSC':
                     send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
+                    if simulate_error:
+                        index = randint(0, len(send_data))
+                        lista = len(send_data)
+                        lista[index] = flip[lista[index]]
+                        send_data = "".join(lista)
                 case 'CRC':
                     send_data = CRC.codify(code_word)
+                    if simulate_error:
+                        index = randint(0, len(send_data))
+                        lista = list(send_data)
+                        lista[index] = flip[lista[index]]
+                        send_data = "".join(lista)
                 case 'Hamming':
                     if len(dados) > 4:
                         print("o valor total deve ser de  4 e bits")
