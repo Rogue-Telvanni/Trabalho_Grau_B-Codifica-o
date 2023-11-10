@@ -7,17 +7,31 @@ import Huffman
 import BSC
 import socket
 import CRC
+import EncodeType
+
 
 # constants
 BUFFER_SIZE = 2024
 BSC_PARITY_SIZE = 3
-Mode = Enum('Mode', ['CRC', 'BSC', 'Hamming'])
 
 
 def main():
+    code_word = "10011101001110110"
+    code_word = "10011101001010110"
+    count = ceil(len(code_word) / 7)
+    data = ""
+    for index in range(count):
+        offset = 7
+        if len(code_word) < index * 7 + 4:
+            offset = len(code_word) - index * 7
+            data += code_word[index * 7: index * 7 + offset]
+            continue
+        data += Hamming.decode(code_word[index * 7: index * 7 + offset])
+    code_word = data
+
     choice = show_start()
     while choice == 0:
-        show_start()
+        choice = show_start()
 
     host, port = show_conn_params()
     match choice:
@@ -44,7 +58,7 @@ def show_start() -> int:
 
 
 def run_as_client(host: str, port: int):
-    mode = Mode('BSC')
+    mode = EncodeType.EncodeType.BSC
     flip = {"1": "0", "0": "1"}
     simulate_error = False
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -54,22 +68,37 @@ def run_as_client(host: str, port: int):
             if dados == "exit":
                 break
 
-            if dados in Mode:
-                mode = Mode(dados)
+            if dados in [member.name for member in EncodeType.EncodeType]:
+                print("mudando encoding")
+                match dados:
+                    case 'BSC':
+                        mode = EncodeType.EncodeType.BSC
+                    case 'CRC':
+                        mode = EncodeType.EncodeType.CRC
+                    case 'Hamming':
+                        mode = EncodeType.EncodeType.Hamming
+                s.sendall(dados.encode())
+                data = s.recv(BUFFER_SIZE)
+                print("retornado: " + data.decode())
+                continue
 
             if dados == "erro":
-                simulate_error != simulate_error
+                simulate_error = not simulate_error
+                if simulate_error:
+                    print("Mudando para não adicionar um erro")
+                else:
+                    print("mudando para adicionar um bit de erro")
                 continue
 
             tree, sorted_symbols, code_word = Huffman.codify(dados)
-            print("enviando code word" + code_word, end="\n")
+            print("enviando code word: " + code_word, end="\n")
             send_data = ""
-            match mode.value:
+            match mode.name:
                 case 'BSC':
                     send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
                     if simulate_error:
                         index = randint(0, len(send_data))
-                        lista = len(send_data)
+                        lista = list(send_data)
                         lista[index] = flip[lista[index]]
                         send_data = "".join(lista)
                 case 'CRC':
@@ -85,9 +114,14 @@ def run_as_client(host: str, port: int):
                         offset = 4
                         if len(code_word) < index * 4 + 4:
                             offset = len(code_word) - index * 4
-                            send_data += value[index * 4: index * 4 + offset]
+                            send_data += code_word[index * 4: index * 4 + offset]
                             continue
                         send_data += Hamming.encode(code_word[index * 4: index * 4 + offset])
+                    if simulate_error:
+                        index = randint(0, len(send_data))
+                        lista = list(send_data)
+                        lista[index] = flip[lista[index]]
+                        send_data = "".join(lista)
 
 
             # gera a string com o dicionário para gerar a arvore
@@ -107,7 +141,7 @@ def run_as_client(host: str, port: int):
 
 def run_as_server(port: int):
     # server side
-    mode = Mode('BSC')
+    mode = EncodeType.EncodeType.BSC
     ip_conn = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
         tcp_socket.bind((ip_conn, port))
@@ -122,18 +156,25 @@ def run_as_server(port: int):
                     break
 
                 dados = data.decode()
-                if dados in Mode:
-                    mode = Mode(dados)
+                print("Recebi: " + dados)
+                if dados in [member.name for member in EncodeType.EncodeType]:
+                    match dados:
+                        case 'BSC':
+                            mode = EncodeType.EncodeType.BSC
+                        case 'CRC':
+                            mode = EncodeType.EncodeType.CRC
+                        case 'Hamming':
+                            mode = EncodeType.EncodeType.Hamming
+
                     connection.sendall(("mudando para receber: " + mode.name).encode())
                     continue
 
-                print("Recebi" + dados)
                 split_str = dados.split("|")
                 tree_string = split_str[0]
                 code_word = split_str[1]
                 print("Valor Recebido: " + code_word, end="\n")
                 valido = True
-                match mode.value:
+                match mode.name:
                     case 'BSC':
                         code_word = BSC.valida_bits(code_word, BSC_PARITY_SIZE)
                     case 'CRC':
@@ -149,7 +190,6 @@ def run_as_server(port: int):
                                 continue
                             data += Hamming.decode(code_word[index * 7: index * 7 + offset])
                         code_word = data
-                        break
 
                 print("valor a ser decodificado: " + code_word, end="\n")
                 dicio = dict()

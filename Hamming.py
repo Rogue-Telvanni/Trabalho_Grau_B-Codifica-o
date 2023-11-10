@@ -46,6 +46,7 @@ def encode(stream: str) -> str:
 
 
 def decode(stream: str):
+    flip = {"1": "0", "0": "1"}
     parity_bits = stream[4: 7]
     code = stream[0: 4]
     # get the parityBits
@@ -78,26 +79,30 @@ def decode(stream: str):
             lista = list(parity_bits)
             lista[pos_erros[0]] = "1" if lista[pos_erros[0]] == "0" else "0"
             code = code + "".join(lista)
+            return hamming_7_4_dict[code]
         elif len(pos_erros) == 2:
             value = corretas[0]
             match value:
                 case 0:
                     codigo = list(code)
-                    bit = bin(int(codigo[3]))
-                    codigo[3] = bit[len(bit) - 1]
+                    codigo[3] = flip[codigo[3]]
                     code = "".join(codigo) + parity_bits
                 case 1:
-                    codigo = list(stream)
-                    bit = bin(int(codigo[0]))
-                    codigo[0] = bit[len(bit) - 1]
+                    codigo = list(code)
+                    codigo[0] = flip[codigo[0]]
                     code = "".join(codigo) + parity_bits
                 case 2:
-                    codigo = list(stream)
-                    bit = bin(int(codigo[1]))
-                    codigo[1] = bit[len(bit) - 1]
+                    codigo = list(code)
+                    codigo[1] = flip[codigo[1]]
                     code = "".join(codigo) + parity_bits
 
             return hamming_7_4_dict[code]
+        elif len(pos_erros) == 3:
+            codigo = list(code)
+            codigo[2] = flip[codigo[2]]
+            code = "".join(codigo) + parity_bits
+            return hamming_7_4_dict[code]
+
     if stream in hamming_7_4_dict:
         return hamming_7_4_dict[stream]
     return stream
