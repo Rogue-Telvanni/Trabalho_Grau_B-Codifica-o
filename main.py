@@ -1,4 +1,5 @@
 from enum import Enum
+from math import ceil
 from random import randint
 
 import Hamming
@@ -14,9 +15,6 @@ Mode = Enum('Mode', ['CRC', 'BSC', 'Hamming'])
 
 
 def main():
-    value = "0110"
-    data, parity_size = Hamming.encode(value)
-    retorno = Hamming.decode(data, parity_size)
     choice = show_start()
     while choice == 0:
         show_start()
@@ -82,10 +80,15 @@ def run_as_client(host: str, port: int):
                         lista[index] = flip[lista[index]]
                         send_data = "".join(lista)
                 case 'Hamming':
-                    if len(dados) > 4:
-                        print("o valor total deve ser de  4 e bits")
-                        continue
-                    send_data = Hamming.haaming_7_4(dados)
+                    count = ceil(len(code_word) / 4)
+                    for index in range(count):
+                        offset = 4
+                        if len(code_word) < index * 4 + 4:
+                            offset = len(code_word) - index * 4
+                            send_data += value[index * 4: index * 4 + offset]
+                            continue
+                        send_data += Hamming.encode(code_word[index * 4: index * 4 + offset])
+
 
             # gera a string com o dicionário para gerar a arvore
             tree_string = ""
@@ -136,6 +139,16 @@ def run_as_server(port: int):
                     case 'CRC':
                         valido, code_word = CRC.validate(code_word)
                     case 'Hamming':
+                        count = ceil(len(code_word) / 7)
+                        data = ""
+                        for index in range(count):
+                            offset = 7
+                            if len(code_word) < index * 7 + 4:
+                                offset = len(code_word) - index * 7
+                                data += code_word[index * 7: index * 7 + offset]
+                                continue
+                            data += Hamming.decode(code_word[index * 7: index * 7 + offset])
+                        code_word = data
                         break
 
                 print("valor a ser decodificado: " + code_word, end="\n")
