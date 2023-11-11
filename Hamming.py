@@ -8,7 +8,6 @@ hamming_7_4_dict = {
     "0110001": "0110",
     "0111010": "0111",
     "1000101": "1000",
-    "1000101": "1001",
     "1001110": "1001",
     "1010010": "1010",
     "1011001": "1011",
@@ -28,7 +27,6 @@ hamming_4_7_dict = {
     "0110": "0110001",
     "0111": "0111010",
     "1000": "1000101",
-    "1001": "1000101",
     "1001": "1001110",
     "1010": "1010010",
     "1011": "1011001",
@@ -77,6 +75,7 @@ def decode(stream: str):
         if len(pos_erros) == 1:
             # o bit de paridade esta errado
             lista = list(parity_bits)
+            print("Erro na posição: " + str(pos_erros[0] + 5))
             lista[pos_erros[0]] = "1" if lista[pos_erros[0]] == "0" else "0"
             code = code + "".join(lista)
             return hamming_7_4_dict[code]
@@ -85,20 +84,24 @@ def decode(stream: str):
             match value:
                 case 0:
                     codigo = list(code)
+                    print("Erro na posição: 4")
                     codigo[3] = flip[codigo[3]]
                     code = "".join(codigo) + parity_bits
                 case 1:
                     codigo = list(code)
+                    print("Erro na posição: 1")
                     codigo[0] = flip[codigo[0]]
                     code = "".join(codigo) + parity_bits
                 case 2:
                     codigo = list(code)
+                    print("Erro na posição: 2")
                     codigo[1] = flip[codigo[1]]
                     code = "".join(codigo) + parity_bits
 
             return hamming_7_4_dict[code]
         elif len(pos_erros) == 3:
             codigo = list(code)
+            print("Erro na posição: 3")
             codigo[2] = flip[codigo[2]]
             code = "".join(codigo) + parity_bits
             return hamming_7_4_dict[code]

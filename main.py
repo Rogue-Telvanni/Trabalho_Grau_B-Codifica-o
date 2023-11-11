@@ -1,5 +1,5 @@
 from math import ceil
-from random import randint
+from random import randint, seed
 
 import Hamming
 import Huffman
@@ -8,8 +8,10 @@ import socket
 import CRC
 import EncodeType
 
-# encode  bsc varios erros em varios bits
-# hamming mostrar a posição do erro
+# encode  bsc varios erros em varios bits ok
+# hamming mostrar a posição do erro ok
+# no hamming quando o tamanho final for menor que 4 adicionar a quantidade
+# necessária para fechar zero, o servidor deve receber o valor e decodificar
 
 
 # constants
@@ -18,19 +20,7 @@ BSC_PARITY_SIZE = 3
 
 
 def main():
-    code_word = "10011101001110110"
-    code_word = "10011101001010110"
-    count = ceil(len(code_word) / 7)
-    data = ""
-    for index in range(count):
-        offset = 7
-        if len(code_word) < index * 7 + 4:
-            offset = len(code_word) - index * 7
-            data += code_word[index * 7: index * 7 + offset]
-            continue
-        data += Hamming.decode(code_word[index * 7: index * 7 + offset])
-    code_word = data
-
+    seed()
     choice = show_start()
     while choice == 0:
         choice = show_start()
@@ -61,8 +51,8 @@ def show_start() -> int:
 
 def run_as_client(host: str, port: int):
     mode = EncodeType.EncodeType.BSC
-    flip = {"1": "0", "0": "1"}
     simulate_error = False
+    rep = 3
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         while True:
@@ -89,42 +79,42 @@ def run_as_client(host: str, port: int):
                 if simulate_error:
                     print("Mudando para não adicionar um erro")
                 else:
-                    print("mudando para adicionar um bit de erro")
+                    print("mudando para não adicionar um bit de erro")
+                continue
+            elif dados == "rep":
+                rep = int(input("digite o numero de repetições do erro para BSC"))
                 continue
 
             tree, sorted_symbols, code_word = Huffman.codify(dados)
-            print("enviando code word: " + code_word, end="\n")
+            print("enviando code word: " + code_word + " de tamanho: " + str(len(code_word)), end="\n")
             send_data = ""
             match mode.name:
                 case 'BSC':
                     send_data = BSC.add_parity_bits(code_word, BSC_PARITY_SIZE)
                     if simulate_error:
-                        index = randint(0, len(send_data))
-                        lista = list(send_data)
-                        lista[index] = flip[lista[index]]
-                        send_data = "".join(lista)
+                        send_data = adicionar_erro(send_data, rep)
                 case 'CRC':
                     send_data = CRC.codify(code_word)
                     if simulate_error:
-                        index = randint(0, len(send_data))
-                        lista = list(send_data)
-                        lista[index] = flip[lista[index]]
-                        send_data = "".join(lista)
+                        send_data = adicionar_erro(send_data, 1)
                 case 'Hamming':
                     count = ceil(len(code_word) / 4)
                     for index in range(count):
                         offset = 4
-                        if len(code_word) < index * 4 + 4:
+                        data = ""
+                        if index == count - 1:
                             offset = len(code_word) - index * 4
-                            send_data += code_word[index * 4: index * 4 + offset]
-                            continue
-                        send_data += Hamming.encode(code_word[index * 4: index * 4 + offset])
-                    if simulate_error:
-                        index = randint(0, len(send_data))
-                        lista = list(send_data)
-                        lista[index] = flip[lista[index]]
-                        send_data = "".join(lista)
+                            valor = code_word[index * 4: index * 4 + offset]
+                            size = 4 - offset
+                            valor = "0" * size + valor
+                            data += Hamming.encode(valor) + "|" + str(offset)
+                        else:
+                            data += Hamming.encode(code_word[index * 4: index * 4 + offset])
 
+                        if simulate_error:
+                            data = adicionar_erro(data, 1)
+
+                        send_data += data
 
             # gera a string com o dicionário para gerar a arvore
             tree_string = ""
@@ -186,11 +176,12 @@ def run_as_server(port: int):
                         data = ""
                         for index in range(count):
                             offset = 7
-                            if len(code_word) < index * 7 + 4:
-                                offset = len(code_word) - index * 7
-                                data += code_word[index * 7: index * 7 + offset]
-                                continue
-                            data += Hamming.decode(code_word[index * 7: index * 7 + offset])
+                            if index == count - 1:
+                                size = int(split_str[2])
+                                valor = Hamming.decode(code_word[index * 7: index * 7 + offset])
+                                data += valor[len(valor) - size: len(valor)]
+                            else:
+                                data += Hamming.decode(code_word[index * 7: index * 7 + offset])
                         code_word = data
 
                 print("valor a ser decodificado: " + code_word, end="\n")
@@ -207,6 +198,21 @@ def run_as_server(port: int):
                 else:
                     print("valor decodificado com erro: " + resultado, end="\n")
                     connection.sendall(("Recebi com erro: " + resultado).encode())
+
+
+def adicionar_erro(code_word: str, rep: int) -> str:
+    print("adicionando :" + str(rep) + " bits de erro")
+    flip = {"1": "0", "0": "1"}
+    lista = list(code_word)
+    for i in range(rep):
+        index = randint(0, len(code_word))
+        while index > len(lista) - 1:
+            index = randint(0, len(code_word))
+            print("index maior que a lista: " + str(index))
+
+        lista[index] = flip[lista[index]]
+
+    return "".join(lista)
 
 
 if __name__ == '__main__':
