@@ -1,4 +1,3 @@
-from enum import Enum
 from math import ceil
 from random import randint
 
@@ -8,6 +7,9 @@ import BSC
 import socket
 import CRC
 import EncodeType
+
+# encode  bsc varios erros em varios bits
+# hamming mostrar a posição do erro
 
 
 # constants
